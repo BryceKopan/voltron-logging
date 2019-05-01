@@ -1,3 +1,6 @@
+#ifndef SQLWRAPPER_H
+#define SQLWRAPPER_H
+
 #include "mysql_connection.h"
 
 #include <cppconn/driver.h>
@@ -9,7 +12,7 @@
 class SQLWrapper
 {
     public:
-    static void ConnectToDatabase(std::string url, std::string user, std::string pass, std::string database);
+        static void ConnectToDatabase(std::string url, std::string user, std::string pass, std::string database);
         static void ExecuteQuery(std::string query);
         static sql::PreparedStatement* GetPreparedStatement(std::string query);
     
@@ -19,3 +22,4 @@ class SQLWrapper
     
         static void SQLExceptionMessage(sql::SQLException e);
 };
+#endif
