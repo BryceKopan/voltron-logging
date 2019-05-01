@@ -1,3 +1,5 @@
 *.gch
 *.out
 *.DS_Store
+*.json
+*.txt
