@@ -7,10 +7,7 @@
 class JSONWrapper
 {
     public:
-        static void WriteJSONValueToFile(Json::Value value, std::ofstream* file);
-    
-    private:
-        static std::unique_ptr<Json::StreamWriter> writer;
+        static void WriteJSONValueToFile(Json::Value value, std::ofstream& file);
 };
 
 #endif
