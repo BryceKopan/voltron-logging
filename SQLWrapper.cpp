@@ -41,7 +41,7 @@ sql::PreparedStatement* SQLWrapper::GetPreparedStatement(std::string query)
         SQLExceptionMessage(e);
     }
     
-    return nullptr;
+    return NULL;
 }
 
 void SQLWrapper::SQLExceptionMessage(sql::SQLException e)
