@@ -1,6 +1,7 @@
 #include "CAN.h"
 
 #include <unistd.h>
+#include <fcntl.h>
 #include "Packets.h"
 #include "Net.h"
 #include "Debug.h"
