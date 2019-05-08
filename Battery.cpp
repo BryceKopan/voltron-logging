@@ -47,7 +47,7 @@ void Battery::StartCapture(std::string fileName)
         std::string str = "[Logging] Starting Battery Capture\n";
         Debug::writeDebugMessage(str.c_str());
         
-        captureFile.open(fileName, std::ofstream::binary);
+        captureFile.open(fileName.c_str(), std::ofstream::binary);
         sem_post(mutex);
         
         str = "[Logging] Battery Capture file open\n";

@@ -66,7 +66,7 @@ void ZED::StartCapture(std::string fileName)
         std::string str = "[Logging] Starting ZED Capture\n";
         Debug::writeDebugMessage(str.c_str());
         
-        captureFile.open(fileName, std::ofstream::binary);
+        captureFile.open(fileName.c_str(), std::ofstream::binary);
         sem_post(mutex);
         
         str = "[Logging] ZED Capture file open\n";
