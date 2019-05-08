@@ -20,11 +20,12 @@
 #include "Packets.h"
 #include "SQLWrapper.h"
 #include "JSONWrapper.h"
-#include <sys/mman.h>
 #include "Debug.h"
 
 #include "Battery.h"
 #include "CAN.h"
+#include "LIDAR.h"
+#include "ZED.h"
 
 #define SQL_HOST "localhost"
 #define SQL_USER "root"
@@ -35,87 +36,6 @@
 
 sem_t* drivesMutex;
 std::ofstream drivesJSONFile;
-
-sem_t* LIDARMutex;
-std::ofstream LIDARCaptureFile;
-
-sem_t* GPSMutex;
-std::ofstream GPSCaptureFile;
-
-sem_t* ZEDMutex;
-std::ofstream ZEDCaptureFile;
-
-void LIDARListenerThread()
-{
-    int sharedMemoryFD;
-    struct LIDARData* memoryRegions;
-    
-    sharedMemoryFD = shm_open(LIDAR_MEMORY_NAME, O_RDONLY, 0777);
-    if (sharedMemoryFD == -1)
-    {
-        Debug::writeDebugMessage("[Logging] ERROR LIDAR shared memory could not be established");
-    }
-    
-    size_t dataSize = sizeof(struct LIDARData) * LIDAR_DATA_NUM_REGIONS;
-    memoryRegions = (LIDARData*)mmap(NULL, dataSize, PROT_READ, MAP_SHARED, sharedMemoryFD, 0);
-    if (memoryRegions == MAP_FAILED)
-    {
-        Debug::writeDebugMessage("[Logging] ERROR LIDAR shared memory was established, but could not be mapped");
-    }
-    
-    int sockfd = createReadSocket(LIDAR_PORT);
-    if (sockfd < 0)
-    {
-        Debug::writeDebugMessage("[Logging] ERROR opening LIDAR socket\n");
-        return;
-    }
-    Debug::writeDebugMessage("[Logging] LIDAR socket open\n");
-    
-    while(1)
-    {
-        sem_wait(LIDARMutex);
-        
-        struct LIDARPacket pkt;
-        
-        read(sockfd, &pkt, sizeof(pkt));
-        
-        LIDARCaptureFile.write((char*) &memoryRegions[pkt.updated], sizeof(struct LIDARPacket));
-        LIDARCaptureFile.flush();
-        
-        sem_post(LIDARMutex);
-    }
-}
-
-//This is gross can be fixed with OOP
-void StartCapture(bool isCapturing, std::string debugString, std::ofstream& file, std::string fileName, sem_t* mutex)
-{
-    if(!isCapturing)
-    {
-        std::string str = "[Logging] Starting " + debugString + " Capture\n";
-        Debug::writeDebugMessage(str.c_str());
-        
-        std::ofstream file (fileName, std::ofstream::binary);
-        sem_post(mutex);
-        
-        str = "[Logging] " + debugString + " Capture file open\n";
-        Debug::writeDebugMessage(str.c_str());
-    }
-}
-
-void EndCapture(bool isCapturing, std::string debugString, std::ofstream& file, std::string fileName, sem_t* mutex)
-{
-    if(isCapturing)
-    {
-        std::string str = "[Logging] Stoping " + debugString + " Capture\n";
-        Debug::writeDebugMessage(str.c_str());
-        
-        sem_wait(mutex);
-        file.close();
-        
-        str = "[Logging] " + debugString + " Capture file closed\n";
-        Debug::writeDebugMessage(str.c_str());
-    }
-}
 
 std::string GetUnixTimeStampAsString()
 {
@@ -132,31 +52,22 @@ int main(int argc, const char **argv)
     int sockfd = createReadSocket(LOGGING_CONTROL_PORT);
     Debug::writeDebugMessage("[Logging] Logging Control socket open\n");
     
-    sem_unlink("LogBattery");
-    Battery::mutex = sem_open("LogBattery", O_CREAT, 0644, 0);
-    sem_unlink("LogCAN");
-    CAN::mutex = sem_open("LogCAN", O_CREAT, 0644, 0);
-    sem_unlink("LogLIDAR");
-    LIDARMutex = sem_open("LogLIDAR", O_CREAT, 0644, 0);
-    sem_unlink("LogGPS");
-    GPSMutex = sem_open("LogGPS", O_CREAT, 0644, 0);
-    sem_unlink("LogZED");
-    ZEDMutex = sem_open("LogZED", O_CREAT, 0644, 0);
     sem_unlink("LogDrives");
     drivesMutex = sem_open("LogDrives", O_CREAT, 0644, 0);
     
-    std::thread batteryThread (Battery::ListenerThread);
-    std::thread CANThread (CAN::ListenerThread);
-    std::thread LIDARThread (LIDARListenerThread);
-//    std::thread GPSThread (GPSListenerThread);
-//    std::thread ZEDThread (ZEDListenerThread);
-    
     bool isDriving = false;
-    bool isCapturingBattery = false;
-    bool isCapturingCAN = false;
-    bool isCapturingLIDAR = false;
-    bool isCapturingGPS = false;
-    bool isCapturingZED = false;
+    
+    Battery::Init();
+    std::thread batteryThread (Battery::ListenerThread);
+    
+    CAN::Init();
+    std::thread CANThread (CAN::ListenerThread);
+    
+    LIDAR::Init();
+    std::thread LIDARThread (LIDAR::ListenerThread);
+    
+    ZED::Init();
+    std::thread ZEDThread (ZED::ListenerThread);
     
     while(1)
     {
@@ -201,52 +112,43 @@ int main(int argc, const char **argv)
                     Debug::writeDebugMessage("[Logging] Ending Drive\n");
                     isDriving = false;
                     
-                    EndCapture(isCapturingBattery, "Battery", Battery::captureFile, "BatteryCapture.txt", Battery::mutex);
-                    EndCapture(isCapturingCAN, "CAN", CAN::captureFile, "CANCapture.txt", CAN::mutex);
-                    EndCapture(isCapturingLIDAR,"LIDAR", LIDARCaptureFile, "LIDARCapture.txt", LIDARMutex);
-                    EndCapture(isCapturingGPS, "GPS", GPSCaptureFile, "GPSCapture.txt", GPSMutex);
-                    EndCapture(isCapturingZED, "ZED", ZEDCaptureFile, "ZEDCapture.txt", ZEDMutex);
+                    Battery::EndCapture();
+                    CAN::EndCapture();
+                    LIDAR::EndCapture();
+                    ZED::EndCapture();
                 }
                 break;
                 
             case StartBatteryCapture:
-                StartCapture(isCapturingBattery, "Battery", Battery::captureFile, "BatteryCapture.txt", Battery::mutex);
+                Battery::StartCapture("BatteryCapture.txt");
                 break;
                 
             case EndBatteryCapture:
-                EndCapture(isCapturingBattery, "Battery", Battery::captureFile, "BatteryCapture.txt", Battery::mutex);
+                Battery::EndCapture();
                 break;
                 
             case StartCANCapture:
-                StartCapture(isCapturingCAN, "CAN", CAN::captureFile, "CANCapture.txt", CAN::mutex);
+                CAN::StartCapture("BatteryCapture.txt");
                 break;
                 
             case EndCANCapture:
-                EndCapture(isCapturingCAN, "CAN", CAN::captureFile, "CANCapture.txt", CAN::mutex);
+                CAN::EndCapture();
                 break;
                 
             case StartLIDARCapture:
-                StartCapture(isCapturingLIDAR,"LIDAR", LIDARCaptureFile, "LIDARCapture.txt", LIDARMutex);
+                LIDAR::StartCapture("LIDARCapture.txt");
                 break;
                 
             case EndLIDARCapture:
-                EndCapture(isCapturingLIDAR,"LIDAR", LIDARCaptureFile, "LIDARCapture.txt", LIDARMutex);
-                break;
-                
-            case StartGPSCapture:
-                StartCapture(isCapturingGPS, "GPS",GPSCaptureFile, "GPSCapture.txt", GPSMutex);
-                break;
-                
-            case EndGPSCapture:
-                EndCapture(isCapturingGPS, "GPS", GPSCaptureFile, "GPSCapture.txt", GPSMutex);
+                LIDAR::EndCapture();
                 break;
                 
             case StartZEDCapture:
-                StartCapture(isCapturingZED, "ZED", ZEDCaptureFile, "ZEDCapture.txt", ZEDMutex);
+                ZED::StartCapture("ZEDCapture.txt");
                 break;
                 
             case EndZEDCapture:
-                EndCapture(isCapturingZED, "ZED", ZEDCaptureFile, "ZEDCapture.txt", ZEDMutex);
+                ZED::EndCapture();
                 break;
                 
             default:
