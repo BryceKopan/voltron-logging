@@ -18,6 +18,7 @@
 #include <semaphore.h>
 #include <jsoncpp/json/json.h>
 #include <jsoncpp/json/writer.h>
+#include <fcntl.h>
 #include "Net.h"
 #include "Packets.h"
 #include "SQLWrapper.h"
