@@ -40,7 +40,7 @@ std::ofstream drivesJSONFile;
 
 std::string GetUnixTimeStampAsString()
 {
-    std::time_t result = std::time(nullptr);
+    std::time_t result = std::time(NULL);
     std::stringstream ss;
     ss << result;
     return ss.str();
