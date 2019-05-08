@@ -16,10 +16,11 @@
 #include <fstream>
 #include <thread>
 #include <semaphore.h>
+#include <jsoncpp/json/json.h>
+#include <jsoncpp/json/writer.h>
 #include "Net.h"
 #include "Packets.h"
 #include "SQLWrapper.h"
-#include "JSONWrapper.h"
 #include "Debug.h"
 
 #include "Battery.h"
