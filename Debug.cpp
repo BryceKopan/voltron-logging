@@ -35,7 +35,7 @@ void Debug::writeDebugMessage(const char* format, ...)
     
     printf("%s", pkt.str);
     
-    if (write(debugSock, &pkt, sizeof(int) + pkt.strLength) == -1)
+    if (write(debugSock, &pkt, sizeof(int) + sizeof(time_t) + pkt.strLength + 4) == -1)
     {
         return;
     }
