@@ -1,5 +1,6 @@
 #include "LIDAR.h"
 
+#include <ctime>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
