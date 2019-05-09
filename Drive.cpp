@@ -5,7 +5,7 @@
 //OSXinclude path
 //#include <json/json.h>
 
-#include <time.h>
+#include <ctime.h>
 #include <fcntl.h>
 #include "Debug.h"
 #include "JSONWrapper.h"
