@@ -5,6 +5,8 @@
 //OSXinclude path
 //#include <json/json.h>
 
+#include <time.h>
+#include <fcntl.h>
 #include "Debug.h"
 #include "JSONWrapper.h"
 #include "Battery.h"
