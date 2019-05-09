@@ -1,5 +1,10 @@
 #include "Drive.h"
 
+//Ubuntu include path
+#include <jsoncpp/json/json.h>
+//OSXinclude path
+//#include <json/json.h>
+
 #include "Debug.h"
 #include "JSONWrapper.h"
 #include "Battery.h"

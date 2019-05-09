@@ -1,5 +1,6 @@
 #include "SQLThread.h"
 
+#include <fcntl.h>
 #include "JSONWrapper.h"
 #include "SQLWrapper.h"
 #include "Debug.h"

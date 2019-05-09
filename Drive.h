@@ -1,13 +1,6 @@
 #ifndef DRIVE_h
 #define DRIVE_h
 
-//Ubuntu include path
-//#include <jsoncpp/json/json.h>
-//#include <jsoncpp/json/writer.h>
-//OSXinclude path
-#include <json/json.h>
-#include <json/writer.h>
-
 #include <semaphore.h>
 #include <fstream>
 
