@@ -1,51 +1,21 @@
-#include <stdlib.h>
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
-#include <ctime>
-#include <fstream>
 #include <thread>
-#include <semaphore.h>
-#include <jsoncpp/json/json.h>
-#include <jsoncpp/json/writer.h>
-#include <fcntl.h>
-#include "Net.h"
 #include "Packets.h"
-#include "SQLWrapper.h"
 #include "Debug.h"
+#include "SQLWrapper.h"
+#include "Net.h"
 
+#include "Drive.h"
 #include "Battery.h"
 #include "CAN.h"
 #include "LIDAR.h"
 #include "ZED.h"
-
-#define SQL_HOST "localhost"
-#define SQL_USER "root"
-#define SQL_PASSWORD ""
-#define SQL_DB "Voltron"
+#include "SQLThread.h"
 
 #define DRIVES_FILENAME "Drives.json"
-
-sem_t* drivesMutex;
-std::ofstream drivesJSONFile;
-
-std::string GetUnixTimeStampAsString()
-{
-    std::time_t result = std::time(NULL);
-    std::stringstream ss;
-    ss << result;
-    return ss.str();
-}
+#define BATTERY_FILENAME "BatteryCapture.cap"
+#define CAN_FILENAME "CANCapture.cap"
+#define LIDAR_FILENAME "LIDARCapture.cap"
+#define ZED_FILENAME "ZEDCapture.cap"
 
 int main(int argc, const char **argv)
 {
@@ -54,10 +24,7 @@ int main(int argc, const char **argv)
     int sockfd = createReadSocket(LOGGING_CONTROL_PORT);
     Debug::writeDebugMessage("[Logging] Logging Control socket open\n");
     
-    sem_unlink("LogDrives");
-    drivesMutex = sem_open("LogDrives", O_CREAT, 0644, 0);
-    
-    bool isDriving = false;
+    Drive::Init(DRIVES_FILENAME);
     
     Battery::Init();
     std::thread batteryThread (Battery::ListenerThread);
@@ -70,6 +37,8 @@ int main(int argc, const char **argv)
     
     ZED::Init();
     std::thread ZEDThread (ZED::ListenerThread);
+    
+    std::thread sqlThread (SQLThread::ListenerThread, DRIVES_FILENAME);
     
     while(1)
     {
@@ -84,45 +53,15 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartDrive:
-                if(!isDriving)
-                {
-                    Debug::writeDebugMessage("[Logging] Starting Drive\n");
-                    isDriving = true;
-                    
-                    drivesJSONFile.open(DRIVES_FILENAME);
-                    
-                    Json::Value root;
-                    
-                    //if(!reader.parse( config_doc, root ))
-                    
-                    root["Drives"][0]["StartUNIXTimestamp"] = GetUnixTimeStampAsString();
-                    
-                    Json::StreamWriterBuilder builder;
-                    builder["commentStyle"] = "None";
-                    builder["indentation"] = "   ";
-                    
-                    std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
-                    writer -> write(root, &drivesJSONFile);
-                    
-                    drivesJSONFile.close();
-                }
+                Drive::StartDrive();
                 break;
                 
             case EndDrive:
-                if(isDriving)
-                {
-                    Debug::writeDebugMessage("[Logging] Ending Drive\n");
-                    isDriving = false;
-                    
-                    Battery::EndCapture();
-                    CAN::EndCapture();
-                    LIDAR::EndCapture();
-                    ZED::EndCapture();
-                }
+                Drive::EndDrive();
                 break;
                 
             case StartBatteryCapture:
-                Battery::StartCapture("BatteryCapture.txt");
+                Battery::StartCapture(BATTERY_FILENAME);
                 break;
                 
             case EndBatteryCapture:
@@ -130,7 +69,7 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartCANCapture:
-                CAN::StartCapture("BatteryCapture.txt");
+                CAN::StartCapture(CAN_FILENAME);
                 break;
                 
             case EndCANCapture:
@@ -138,7 +77,7 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartLIDARCapture:
-                LIDAR::StartCapture("LIDARCapture.txt");
+                LIDAR::StartCapture(LIDAR_FILENAME);
                 break;
                 
             case EndLIDARCapture:
@@ -146,7 +85,7 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartZEDCapture:
-                ZED::StartCapture("ZEDCapture.txt");
+                ZED::StartCapture(ZED_FILENAME);
                 break;
                 
             case EndZEDCapture:

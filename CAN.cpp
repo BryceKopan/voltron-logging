@@ -5,10 +5,11 @@
 #include "Packets.h"
 #include "Net.h"
 #include "Debug.h"
+#include "Drive.h"
 
 sem_t* CAN::mutex;
 std::ofstream CAN::captureFile;
-bool CAN::isCapturing;
+bool CAN::isCapturing = false;
 
 void CAN::Init()
 {
@@ -40,34 +41,42 @@ void CAN::ListenerThread()
     }
 }
 
-void CAN::StartCapture(std::string fileName)
+bool CAN::StartCapture(std::string fileName)
 {
     if(!isCapturing)
     {
-        std::string str = "[Logging] Starting CAN Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Starting CAN Capture\n");
+        Drive::StartCapture("CAN", fileName);
         
         captureFile.open(fileName.c_str(), std::ofstream::binary);
         sem_post(mutex);
         
-        str = "[Logging] CAN Capture file open\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] CAN Capture file open\n");
         isCapturing = true;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
-void CAN::EndCapture()
+bool CAN::EndCapture()
 {
     if(isCapturing)
     {
-        std::string str = "[Logging] Stoping CAN Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Stoping CAN Capture\n");
+        Drive::EndCapture("CAN");
         
         sem_wait(mutex);
         captureFile.close();
         
-        str = "[Logging] CAN Capture file closed\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] CAN Capture file closed\n");
         isCapturing = false;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }

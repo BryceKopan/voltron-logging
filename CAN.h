@@ -7,16 +7,15 @@
 class CAN
 {
     public:
-        static sem_t* mutex;
-        static std::ofstream captureFile;
-    
         static void Init();
         static void ListenerThread();
-        static void StartCapture(std::string fileName);
-        static void EndCapture();
+        static bool StartCapture(std::string fileName);
+        static bool EndCapture();
     
     private:
         static bool isCapturing;
+        static sem_t* mutex;
+        static std::ofstream captureFile;
 };
 
 #endif

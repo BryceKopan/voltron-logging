@@ -5,10 +5,11 @@
 #include "Packets.h"
 #include "Net.h"
 #include "Debug.h"
+#include "Drive.h"
 
 sem_t* Battery::mutex;
 std::ofstream Battery::captureFile;
-bool Battery::isCapturing;
+bool Battery::isCapturing = false;
 
 void Battery::Init()
 {
@@ -40,34 +41,42 @@ void Battery::ListenerThread()
     }
 }
 
-void Battery::StartCapture(std::string fileName)
+bool Battery::StartCapture(std::string fileName)
 {
     if(!isCapturing)
     {
-        std::string str = "[Logging] Starting Battery Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Starting Battery Capture\n");
+        Drive::StartCapture("Battery", fileName);
         
         captureFile.open(fileName.c_str(), std::ofstream::binary);
         sem_post(mutex);
         
-        str = "[Logging] Battery Capture file open\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Battery Capture file open\n");
         isCapturing = true;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
-void Battery::EndCapture()
+bool Battery::EndCapture()
 {
     if(isCapturing)
     {
-        std::string str = "[Logging] Stoping Battery Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Stoping Battery Capture\n");
+        Drive::EndCapture("Battery");
         
         sem_wait(mutex);
         captureFile.close();
         
-        str = "[Logging] Battery Capture file closed\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Battery Capture file closed\n");
         isCapturing = false;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }

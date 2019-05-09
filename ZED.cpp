@@ -3,13 +3,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <ctime>
 #include "Packets.h"
 #include "Net.h"
 #include "Debug.h"
+#include "Drive.h"
 
 sem_t* ZED::mutex;
 std::ofstream ZED::captureFile;
-bool ZED::isCapturing;
+bool ZED::isCapturing = false;
 
 void ZED::Init()
 {
@@ -52,6 +54,7 @@ void ZED::ListenerThread()
         
         read(sockfd, &pkt, sizeof(pkt));
         
+        captureFile.write((char*) &pkt.timestamp, sizeof(std::time_t));
         captureFile.write((char*) &memoryRegions[pkt.updated], sizeof(struct CameraPacket));
         captureFile.flush();
         
@@ -59,34 +62,42 @@ void ZED::ListenerThread()
     }
 }
 
-void ZED::StartCapture(std::string fileName)
+bool ZED::StartCapture(std::string fileName)
 {
     if(!isCapturing)
     {
-        std::string str = "[Logging] Starting ZED Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Starting ZED Capture\n");
+        Drive::StartCapture("ZED", fileName);
         
         captureFile.open(fileName.c_str(), std::ofstream::binary);
         sem_post(mutex);
         
-        str = "[Logging] ZED Capture file open\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] ZED Capture file open\n");
         isCapturing = true;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
-void ZED::EndCapture()
+bool ZED::EndCapture()
 {
     if(isCapturing)
     {
-        std::string str = "[Logging] Stoping ZED Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Stoping ZED Capture\n");
+        Drive::EndCapture("ZED");
         
         sem_wait(mutex);
         captureFile.close();
         
-        str = "[Logging] ZED Capture file closed\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] ZED Capture file closed\n");
         isCapturing = false;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }

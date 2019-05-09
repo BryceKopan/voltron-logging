@@ -12,7 +12,7 @@
 class SQLWrapper
 {
     public:
-        static void ConnectToDatabase(std::string url, std::string user, std::string pass, std::string database);
+        static bool ConnectToDatabase(std::string url, std::string user, std::string pass, std::string database);
         static void ExecuteQuery(std::string query);
         static sql::PreparedStatement* GetPreparedStatement(std::string query);
     

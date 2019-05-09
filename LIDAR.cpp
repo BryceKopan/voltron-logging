@@ -6,10 +6,11 @@
 #include "Packets.h"
 #include "Net.h"
 #include "Debug.h"
+#include "Drive.h"
 
 sem_t* LIDAR::mutex;
 std::ofstream LIDAR::captureFile;
-bool LIDAR::isCapturing;
+bool LIDAR::isCapturing = false;
 
 void LIDAR::Init()
 {
@@ -52,6 +53,7 @@ void LIDAR::ListenerThread()
         
         read(sockfd, &pkt, sizeof(pkt));
         
+        captureFile.write((char*) &pkt.timestamp, sizeof(std::time_t));
         captureFile.write((char*) &memoryRegions[pkt.updated], sizeof(struct LIDARPacket));
         captureFile.flush();
         
@@ -59,34 +61,42 @@ void LIDAR::ListenerThread()
     }
 }
 
-void LIDAR::StartCapture(std::string fileName)
+bool LIDAR::StartCapture(std::string fileName)
 {
     if(!isCapturing)
     {
-        std::string str = "[Logging] Starting LIDAR Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Starting LIDAR Capture\n");
+        Drive::StartCapture("LIDAR", fileName);
         
         captureFile.open(fileName.c_str(), std::ofstream::binary);
         sem_post(mutex);
         
-        str = "[Logging] LIDAR Capture file open\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] LIDAR Capture file open\n");
         isCapturing = true;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
-void LIDAR::EndCapture()
+bool LIDAR::EndCapture()
 {
     if(isCapturing)
     {
-        std::string str = "[Logging] Stoping LIDAR Capture\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] Stoping LIDAR Capture\n");
+        Drive::EndCapture("LIDAR");
         
         sem_wait(mutex);
         captureFile.close();
         
-        str = "[Logging] LIDAR Capture file closed\n";
-        Debug::writeDebugMessage(str.c_str());
+        Debug::writeDebugMessage("[Logging] LIDAR Capture file closed\n");
         isCapturing = false;
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }

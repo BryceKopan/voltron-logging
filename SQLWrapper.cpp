@@ -2,17 +2,19 @@
 
 sql::Connection* SQLWrapper::connection;
 
-void SQLWrapper::ConnectToDatabase(std::string url, std::string user, std::string pass, std::string database)
+bool SQLWrapper::ConnectToDatabase(std::string url, std::string user, std::string pass, std::string database)
 {
     try
     {
         sql::Driver* driver = get_driver_instance();
         connection = driver->connect(url, user, pass);
         connection->setSchema(database);
+        return true;
     }
     catch (sql::SQLException &e)
     {
         SQLExceptionMessage(e);
+        return false;
     }
 }
 

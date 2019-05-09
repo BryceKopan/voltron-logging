@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
 #include "Net.h"
 #include "Packets.h"
 
@@ -30,6 +31,7 @@ void Debug::writeDebugMessage(const char* format, ...)
     va_end(arg);
     
     pkt.strLength = strlen(pkt.str);
+    time(&pkt.timestamp);
     
     printf("%s", pkt.str);
     
