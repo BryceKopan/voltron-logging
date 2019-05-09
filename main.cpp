@@ -4,6 +4,7 @@
 #include "SQLWrapper.h"
 #include "Net.h"
 
+#include <sstream>
 #include "Drive.h"
 #include "Battery.h"
 #include "CAN.h"
@@ -42,8 +43,10 @@ int main(int argc, const char **argv)
     
     while(1)
     {
+        srand(time(NULL));
         struct LoggingControlPacket pkt;
         read(sockfd, &pkt, sizeof(pkt));
+        std::stringstream ss;
         
         switch (pkt.code)
         {
@@ -61,7 +64,9 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartBatteryCapture:
-                Battery::StartCapture(BATTERY_FILENAME);
+                ss.clear();
+                ss << rand() % 9999999999 << BATTERY_FILENAME;
+                Battery::StartCapture(ss.str());
                 break;
                 
             case EndBatteryCapture:
@@ -69,7 +74,9 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartCANCapture:
-                CAN::StartCapture(CAN_FILENAME);
+                ss.clear();
+                ss << rand() % 9999999999 << CAN_FILENAME;
+                CAN::StartCapture(ss.str());
                 break;
                 
             case EndCANCapture:
@@ -77,7 +84,9 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartLIDARCapture:
-                LIDAR::StartCapture(LIDAR_FILENAME);
+                ss.clear();
+                ss << rand() % 9999999999 << LIDAR_FILENAME;
+                LIDAR::StartCapture(ss.str());
                 break;
                 
             case EndLIDARCapture:
@@ -85,7 +94,9 @@ int main(int argc, const char **argv)
                 break;
                 
             case StartZEDCapture:
-                ZED::StartCapture(ZED_FILENAME);
+                ss.clear();
+                ss << rand() % 9999999999 << ZED_FILENAME;
+                ZED::StartCapture(ss.str());
                 break;
                 
             case EndZEDCapture:

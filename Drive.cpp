@@ -1,9 +1,9 @@
 #include "Drive.h"
 
 //Ubuntu include path
-#include <jsoncpp/json/json.h>
+//#include <jsoncpp/json/json.h>
 //OSXinclude path
-//#include <json/json.h>
+#include <json/json.h>
 
 #include <ctime>
 #include <fcntl.h>
@@ -49,7 +49,6 @@ void Drive::StartDrive()
         {
             currentDriveIndex++;
         }
-        currentDriveIndex = 0;
         
         root["Drives"][currentDriveIndex]["IsCompleted"] = false;
         root["Drives"][currentDriveIndex]["StartUnixTimestamp"] = GetUnixTimeStampAsInt();
@@ -124,11 +123,11 @@ void Drive::EndCapture(std::string type)
     int targetIndex, captureIndex = 0;
     for (const Json::Value& capture : root["Drives"][0]["Captures"])
     {
-        captureIndex++;
-        if(capture["Type"].asString() == type)
+        if(type.compare(capture["Type"].asString()) == 0)
         {
             targetIndex = captureIndex;
         }
+        captureIndex++;
     }
     
     root["Drives"][currentDriveIndex]["Captures"][targetIndex]["EndUnixTimestamp"] = GetUnixTimeStampAsInt();

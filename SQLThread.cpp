@@ -1,6 +1,7 @@
 #include "SQLThread.h"
 
 #include <fcntl.h>
+#include <fstream>
 #include "JSONWrapper.h"
 #include "SQLWrapper.h"
 #include "Debug.h"
@@ -62,25 +63,57 @@ void SQLThread::UploadDrive(int driveIndex, std::string drivesFileName)
     Debug::writeDebugMessage("[Logging] Uploading drive to SQL server\n");
     
     Json::Value root;
+    
+    sem_wait(mutex);
     JSONWrapper::ReadJSONFile(root, drivesFileName);
+    sem_post(mutex);
     
     sql::PreparedStatement* driveQuery = SQLWrapper::GetPreparedStatement("INSERT INTO drive(StartUnixTimestamp, EndUnixTimestamp) VALUES (?, ?)");
     driveQuery->setInt(1, root["Drives"][driveIndex]["StartUnixTimestamp"].asInt());
     driveQuery->setInt(2, root["Drives"][driveIndex]["EndUnixTimestamp"].asInt());
     driveQuery->execute();
     
-    sql::PreparedStatement* captureQuery = SQLWrapper::GetPreparedStatement("INSERT INTO capture(CaptureTypeID, StartUnixTimestamp, EndUnixTimestamp) VALUES (?, ?, ?)");
+    sql::PreparedStatement* captureQuery = SQLWrapper::GetPreparedStatement("INSERT INTO capture(CaptureTypeID, StartUnixTimestamp, EndUnixTimestamp, CaptureBlob) VALUES (?, ?, ?, ?)");
     
     for (const Json::Value& capture : root["Drives"][driveIndex]["Captures"])
     {
+        //From SQL table capturetype
+        int captureType;
         if(capture["Type"].asString() == "Battery")
         {
-            captureQuery->setInt(1, 1);
-            captureQuery->setInt(2, capture["StartUnixTimestamp"].asInt());
-            captureQuery->setInt(3, capture["EndUnixTimestamp"].asInt());
-            captureQuery->execute();
+            captureType = 1;
         }
+        else if(capture["Type"].asString() == "CAN")
+        {
+            captureType = 2;
+        }
+        else if(capture["Type"].asString() == "LIDAR")
+        {
+            captureType = 3;
+        }
+        else if(capture["Type"].asString() == "ZED")
+        {
+            captureType = 5;
+        }
+        
+        captureQuery->setInt(1, captureType);
+        captureQuery->setInt(2, capture["StartUnixTimestamp"].asInt());
+        captureQuery->setInt(3, capture["EndUnixTimestamp"].asInt());
+        
+        std::ifstream captureFile(capture["File"].asString(), std::ifstream::binary);
+        
+        captureQuery->setBlob(4, &captureFile);
+        captureQuery->execute();
+        
+        //remove(capture["File"].asCString());
     }
+    
+    Json::Value removed;
+    root["Drives"].removeIndex(driveIndex, &removed);
+    
+    sem_wait(mutex);
+    JSONWrapper::WriteJSONToFile(root, drivesFileName);
+    sem_post(mutex);
     
     Debug::writeDebugMessage("[Logging] Drive uploaded to SQL server\n");
 }
